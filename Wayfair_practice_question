@@ -1,1 +1,35 @@
 
+WITH first_year 
+AS
+(
+SELECT EXTRACT(year FROM transaction_date) AS current_year,
+product_id, SUM(spend) AS current_spend FROM user_transactions
+GROUP BY product_id,EXTRACT(year FROM transaction_date) ORDER BY  
+product_id,EXTRACT(year FROM transaction_date)
+),
+second_year
+AS
+(
+SELECT EXTRACT(year FROM transaction_date) +1
+AS previous_year,
+product_id, SUM(spend) AS prev_spend FROM user_transactions
+WHERE EXTRACT(year FROM transaction_date + interval'1 year')
+IN (SELECT EXTRACT(year FROM transaction_date ) FROM 
+user_transactions)
+GROUP BY product_id,
+EXTRACT(year FROM transaction_date ) 
+ORDER BY  
+product_id,EXTRACT(year FROM transaction_date )
+)
+SELECT 
+f.current_year as year,
+f.product_id,
+f.current_spend AS curr_year_spend,
+s.prev_spend AS prev_year_spend,
+ROUND(((f.current_spend-s.prev_spend)/s.prev_spend)*100,2) AS yoy_rate
+ FROM first_year f   
+ LEFT JOIN 
+ second_year s    
+ ON f.current_year= s.previous_year
+ AND
+ f.product_id=s.product_id
